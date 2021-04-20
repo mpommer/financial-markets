@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 """
 Created on Tue Apr 20 11:07:58 2021
-
-@author: marce
+Collection of analytic formulas in the context of 
+financial markets, for example Black formula and bachelier formula 
+for the caplet.
+@author: Marcel Pommer
 """
 
 import numpy as np
@@ -44,13 +46,16 @@ class analyticformulas:
         '''
         if forward == optionStrike :
             return volatility * math.sqrt(optionMaturity / math.pi / 2.0)
-        else:    
-            dPlus = (forward - optionStrike) / (volatility * math.sqrt(optionMaturity));
-
+        else:
+            if optionMaturity > 0:
+                dPlus = (forward - optionStrike) / (volatility * math.sqrt(optionMaturity));
+            else:
+                dPlus = np.Inf
+                
             valueAnalytic = periodLength * discountFactor* ((forward - optionStrike) * st.norm.cdf(dPlus, 0.0, 1.0)\
 			+ volatility * math.sqrt(optionMaturity) * st.norm.pdf(dPlus, 0.0, 1.0))
 
-            return valueAnalytic
+            return nominal * valueAnalytic
     
     
     def blackScholesCall(self, forward, optionStrike, volatility = 0.05,
@@ -84,15 +89,18 @@ class analyticformulas:
             DESCRIPTION. Disounted option price.
 
         '''
-        dPlus = (math.log(forward/optionStrike) + 0.5*volatility *volatility *\
+        if optionMaturity > 0:
+            dPlus = (math.log(forward/optionStrike) + 0.5*volatility *volatility *\
                  math.sqrt(optionMaturity))/(volatility * math.sqrt(optionMaturity))
+        else:
+            dPlus = np.Inf
             
         dMinus = dPlus - volatility * optionMaturity
         
         analyticValue = discountFactor * periodLength * (forward * st.norm.cdf(dPlus, 0.0, 1.0) - \
                                 optionStrike * st.norm.cdf(dMinus, 0.0, 1.0))
             
-        return analyticValue
+        return nominal * analyticValue
     
     
     def BlackScholesDigitalCaplet(self, forward, optionStrike, volatility = 0.05,
@@ -129,8 +137,8 @@ class analyticformulas:
             DESCRIPTION. Disounted option price.
 
         '''
-        analyticValue = self.blackScholesCall(forward, -1, volatility,
-                            optionMaturity,periodLength,discountFactor)
+        analyticValue = self.blackScholesCall(0, -1, volatility,
+                            optionMaturity,periodLength,discountFactor, nominal=nominal)
         
         return analyticValue
     
@@ -171,18 +179,27 @@ class analyticformulas:
         '''
         # check if discountFactor is iterable
         numberOfPeriods = (optionEnd - optionMaturity)/periodLength
-
-        discountArray = np.array(discountFactor)
-        if len(discountArray) != numberOfPeriods:
-            discountArray = np.full((1, numberOfPeriods), discountFactor)
+        try:
+            x = numberOfPeriods.is_integer()
+                        
+        except ValueError:
+            print("Number of Periods is no integer")
+            return np.inf
             
+        discountArray = np.array(discountFactor)
+        if discountArray.size != numberOfPeriods:
+            x = np.arange(numberOfPeriods, dtype=int)
+            x = np.full_like(x, discountFactor, dtype=np.double)
+            discountFactor = x
+            
+       
         # derive swap annuity
         swapAnnuity = 0
-        for i in range(numberOfPeriods):
+        for i in range(int(numberOfPeriods)):
             swapAnnuity += periodLength * discountFactor[i]
         
         analyticValue = self.blackScholesCall(forward, optionStrike, volatility,
-                    optionMaturity, discountFactor=swapAnnuity)
+                    optionMaturity, discountFactor=swapAnnuity, nominal = nominal)
         
         return analyticValue
         
