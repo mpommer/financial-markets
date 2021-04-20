@@ -78,13 +78,36 @@ class analyticformulas:
             DESCRIPTION. Disounted option price.
 
         '''
-        dPlus = math.log(forward/optionStrike) + 0.5*volatility * optionMaturity
+        dPlus = (math.log(forward/optionStrike) + 0.5*volatility *volatility *\
+                 math.sqrt(optionMaturity))/(volatility * math.sqrt(optionMaturity))
+            
         dMinus = dPlus - volatility * optionMaturity
         
         analyticValue = discountFactor * periodLength * (forward * st.norm.cdf(dPlus, 0.0, 1.0) - \
                                 optionStrike * st.norm.cdf(dMinus, 0.0, 1.0))
             
         return analyticValue
+    
+    
+    def BlackScholesDigitalCaplet(self, forward, optionStrike, volatility = 0.05,
+                      optionMaturity = 0, periodLength = 1, discountFactor = 1):
         
+        analyticValue = self.blackScholesCall(forward, -1, volatility,
+                            optionMaturity,periodLength,discountFactor)
+        
+        return analyticValue
+    
+    def BlackScholesSwaption(self, forward, optionStrike, volatility = 0.05,
+            optionMaturity = 0, periodLength = 1, discountFactor = 1, optionEnd = 1):
+        # derive swap annuity
+        numberOfPeriods = (optionEnd - optionMaturity)/periodLength
+        swapAnnuity = 0
+        for i in range(numberOfPeriods):
+            swapAnnuity += periodLength * discountFactor[i]
+        
+        analyticValue = self.blackScholesCall(forward, optionStrike, volatility,
+                    optionMaturity, discountFactor=swapAnnuity)
+        
+        return analyticValue
         
 
