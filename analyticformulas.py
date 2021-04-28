@@ -58,7 +58,7 @@ class analyticformulas:
             return nominal * valueAnalytic
     
     
-    def blackScholesCall(self, forward, optionStrike, volatility = 0.05,
+    def blackScholesCallGeneralForm(self, forward, optionStrike, volatility = 0.05,
         optionMaturity = 0, periodLength = 1, discountFactor = 1, nominal = 1):
         '''
         The function calculates the option (call, Caplet) price for a lognormal model 
@@ -91,16 +91,78 @@ class analyticformulas:
         '''
         if optionMaturity > 0:
             dPlus = (math.log(forward/optionStrike) + 0.5*volatility *volatility *\
-                 math.sqrt(optionMaturity))/(volatility * math.sqrt(optionMaturity))
+                 optionMaturity)/(volatility * math.sqrt(optionMaturity))
         else:
             dPlus = np.Inf
             
-        dMinus = dPlus - volatility * optionMaturity
+        dMinus = dPlus - volatility * volatility * optionMaturity
         
         analyticValue = discountFactor * periodLength * (forward * st.norm.cdf(dPlus, 0.0, 1.0) - \
                                 optionStrike * st.norm.cdf(dMinus, 0.0, 1.0))
             
         return nominal * analyticValue
+    
+    
+    def blackScholesCallExpDiscountfactor(self, forward, optionStrike, volatility = 0.05,
+        optionMaturity = 0, periodLength = 1, interestRate = 0, nominal = 1):
+        '''
+        The function calculates the option (call, Caplet) price for a lognormal model 
+        (Black scholes). The bank account is modeled by: B(t) = exp(-rt)
+
+        Parameters
+        ----------
+        forward : TYPE float.
+            DESCRIPTION. Initial forward value.
+        optionStrike : TYPE, float.
+            DESCRIPTION. Strike for the option.
+        volatility : TYPE, float>0
+            DESCRIPTION. The default is 0.05.
+        optionMaturity : TYPE, integer.
+            DESCRIPTION. The default is 0. Start of the period.
+        periodLength : TYPE, int.
+            DESCRIPTION. The default is 1.
+        discountFactor : Type, float.
+            DESCRIPTION. The default is 1 (no discounting).
+            If specified defines the disocunt factor.
+        nominal : Type, float.
+            DESCRIPTION. The default is 1.
+            If specified defines the nominal.
+            
+        Returns
+        -------
+        TYPE double.
+            DESCRIPTION. Disounted option price.
+
+        '''
+        if optionMaturity > 0:
+            dPlus = (math.log(forward/optionStrike) + (interestRate + 0.5*volatility *volatility) *\
+                periodLength)/(volatility * math.sqrt(periodLength))                     
+        else:
+            dPlus = np.Inf
+            
+        dMinus = (math.log(forward/optionStrike) + (interestRate - 0.5*volatility *volatility) *\
+                periodLength)/(volatility * math.sqrt(periodLength))
+        
+        analyticValue =  (forward * st.norm.cdf(dPlus, 0.0, 1.0) - \
+                    optionStrike* np.exp(-interestRate * periodLength) * st.norm.cdf(dMinus, 0.0, 1.0))
+            
+        return nominal * analyticValue
+    
+    
+    def BlackScholesPutGeneralForm(self, forward = 0.05, interestRate = 0, volatility = 0.3,
+    periodLength = 1, discountFactor = 1,maturity = 1, strike = 0.05, nominal = 1):
+        
+        
+        dPlus = (np.log(forward / strike) + 0.5 * volatility ** 2 * maturity) / \
+            (volatility * np.sqrt(maturity))
+        dMinus = (np.log(forward / strike) - 0.5 * volatility ** 2 * maturity) / \
+            (volatility * np.sqrt(maturity))
+       
+        analyticValue = periodLength*discountFactor*(strike  * st.norm.cdf(-dMinus, 0.0, 1.0) -\
+                    forward * st.norm.cdf(-dPlus, 0.0, 1.0))
+          
+        return analyticValue *nominal
+        
     
     
     def BlackScholesDigitalCaplet(self, forward, optionStrike, volatility = 0.05,
@@ -202,5 +264,38 @@ class analyticformulas:
                     optionMaturity, discountFactor=swapAnnuity, nominal = nominal)
         
         return analyticValue
+    
+    
+    def BlackModelDeltaHedgeExpMoneyMarketAccount(self, forward, optionStrike, volatility = 0.05,
+        optionMaturity = 0, periodLength = 1, interestRate = 0):
+        '''
+        Calculates the delta hedge for a black schooles call option with a 
+        money market account f(T) = exp(-rT)
+
+        Parameters
+        ----------
+        forward : TYPE float, initial value
+            DESCRIPTION.
+        optionStrike : TYPE float
+            DESCRIPTION.
+        volatility : TYPE, float constant volatility
+            DESCRIPTION. The default is 0.05.
+        optionMaturity : TYPE, float, Maturity
+            DESCRIPTION. The default is 0.
+        periodLength : TYPE, float length of period
+            DESCRIPTION. The default is 1.
+        interestRate : TYPE, float
+            DESCRIPTION. The default is 0.
+
+
+        Returns
+        -------
+        delta hedge.
+
+        '''
+        dPlus = (math.log(forward/optionStrike) + (interestRate + 0.5*volatility *volatility) *\
+                periodLength)/(volatility * math.sqrt(periodLength)) 
+            
+        return dPlus
         
 
