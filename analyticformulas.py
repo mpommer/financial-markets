@@ -95,7 +95,7 @@ class analyticformulas:
         else:
             dPlus = np.Inf
             
-        dMinus = dPlus - volatility * volatility * optionMaturity
+        dMinus = dPlus - volatility * optionMaturity
         
         analyticValue = discountFactor * periodLength * (forward * st.norm.cdf(dPlus, 0.0, 1.0) - \
                                 optionStrike * st.norm.cdf(dMinus, 0.0, 1.0))
